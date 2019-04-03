@@ -119,6 +119,8 @@ server {{
             # pwd = open(os.path.join(self.base_path, 'password')).read().strip()
             # r = os.system('echo "%s" | sudo -S %s' % (pwd, cmd))
             r = os.system('sudo -S %s' % (cmd))
+            if r != 0:
+                print('sudo执行%s错误%s' % (cmd, r or ''))
             return r
         except Exception as e:
             import traceback
@@ -127,8 +129,7 @@ server {{
 
     def run_nginx(self, sig):
         r = self.sudo('nginx -s %s' % sig)
-        # if r != 0:
-        #     raise Exception('执行nginx错误%s' % (r or ''))
+        return r
 
     def run_shell(self, path):
         import subprocess
@@ -139,7 +140,8 @@ server {{
         if ov:
             os.environ.setdefault('DJANGO_SETTINGS_MODULE', ov)
         if r != 0:
-            raise Exception(u'%s执行脚本失败:%s' % (path, r))
+            print('执行%s错误%s' % (path, r or ''))
+        return r
 
     def get_applist(self):
         import os

@@ -1,0 +1,4 @@
+upload: http://139.219.199.188:8080/upload
+wsgi: webmain:app
+appid: sintrb2
+gunparam: -k tornado
