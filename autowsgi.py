@@ -163,8 +163,10 @@ server {{
                         try:
                             p = psutil.Process(pid=ap['pid'])
                         except:
+                            print('no pid')
                             ap['pid'] = 0
                     except:
+                        print('no psutil')
                         pass
             if not ap['pid']:
                 del ap['pid']
