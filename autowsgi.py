@@ -1,11 +1,12 @@
 #!/usr/bin/env python
+# -*- coding: UTF-8 -*
 
 
-import os, json, time, shutil
+import os, json, shutil
 
-print(os.path.dirname(__file__))
+
 class AW(object):
-    base_path = os.path.dirname(__file__)
+    base_path = os.path.dirname(os.path.realpath(__file__))
     data = {
         'apps': {}
     }
@@ -61,6 +62,8 @@ class AW(object):
             param.update(config)
             param.setdefault('gunparam', '')
             param.setdefault('host', '%s.demo.inruan.com' % appid)
+            if not param.get('worker'):
+                param['worker'] = 'sync'
             shell = '''
 kill -9 `cat "{temp}/{appid}.pid"` > /dev/null 2>&1
 rm "{temp}/{appid}.pid" 2>&1
@@ -96,34 +99,13 @@ server {{
             break;
         }}
     }}
-    location ~ ^/(static)/ {{
-       root {path}/;
-    }}
-    location ~ ^(/upload/.*)\.(\S+) {{
-        root {path}/;
-        if ($arg_force){{
-            # force handle image
-            proxy_pass http://iwebm_{appid}_server;
-            add_header  "Image-Handle" "force handle image";
-            break;
-        }}
-        # try with files
-        try_files $1-$arg_type.$2 @handleimg;
-        add_header  "Image-Handle" "try with files";
-    }}
-    location @handleimg {{
-        # handle image with server
-        proxy_set_header Host $http_host;
-        proxy_pass http://iwebm_{appid}_server;
-        add_header  "Image-Handle" "handle image with server";
-        break;
-    }}
 }}            
             '''.format(**param)
             with open(os.path.join(nginx_path, '%s.conf' % appid), 'w') as f:
                 f.write(nginx)
 
     def add_application(self, appid, **kwargs):
+        kwargs['appid'] = appid
         self.data['apps'][appid] = kwargs
         self.save()
         self.refresh_script()
@@ -145,8 +127,8 @@ server {{
 
     def run_nginx(self, sig):
         r = self.sudo('nginx -s %s' % sig)
-        if r != 0:
-            raise Exception('执行nginx错误%s' % (r or ''))
+        # if r != 0:
+        #     raise Exception('执行nginx错误%s' % (r or ''))
 
     def run_shell(self, path):
         import subprocess
@@ -159,9 +141,30 @@ server {{
         if r != 0:
             raise Exception(u'%s执行脚本失败:%s' % (path, r))
 
-# aw = AW()
-# aw.add_application('local', path='/Users/robin/DO/GitHub/auto-wsgi', wsgi='test:tornado_app', gunparam='-k tornado', t=2)
-# aw.add_application('local', path='/Users/robin/DO/Py/iticket', wsgi='iticket.wsgi:application')
-# aw.run_application('local')
-# while True:
-#     time.sleep(10)
+    def get_applist(self):
+        import os
+        apps = list(self.data['apps'].values())
+        for ap in apps:
+            if not ap.get('appid'):
+                continue
+            pidfile = '{temp}/{appid}.pid'.format(temp=self.temp_path, appid=ap['appid'])
+            ap['pid'] = 0
+            if os.path.exists(pidfile):
+                with open(pidfile) as f:
+                    ap['pid'] = int(f.read())
+        return apps
+
+
+if __name__ == '__main__':
+    import time
+
+    aw = AW()
+    aw.add_application('t1', path='/Users/robin/DO/GitHub/auto-wsgi', wsgi='test:tornado_app', gunparam='-k tornado', t=2)
+    aw.add_application('t2', path='/Users/robin/DO/Py/iticket', wsgi='iticket.wsgi:application')
+    aw.run_application('t1')
+    aw.run_application('t2')
+    while True:
+        print(aw.data)
+        for ap in aw.get_applist():
+            print(ap)
+        time.sleep(10)

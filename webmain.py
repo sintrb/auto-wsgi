@@ -11,10 +11,20 @@ gaw = AW()
 class BasehHandler(tornado.web.RequestHandler):
     aw = gaw
 
+    def return_json(self, data):
+        self.set_header('Content-Type', 'application/json')
+        self.write(json.dumps(data))
+        self.flush()
 
-class HelloHandler(tornado.web.RequestHandler):
+
+class HelloHandler(BasehHandler):
     def get(self):
         self.write("Hello, world")
+
+
+class AppListHandler(BasehHandler):
+    def get(self):
+        self.return_json(self.aw.get_applist())
 
 
 class UploadApplicationHandler(BasehHandler):
@@ -54,6 +64,7 @@ class UploadApplicationHandler(BasehHandler):
 
 tornado_app = tornado.web.Application([
     (r"/upload", UploadApplicationHandler),
+    (r"/apps", AppListHandler),
     (r"/", HelloHandler),
 ])
 
