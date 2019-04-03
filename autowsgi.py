@@ -152,8 +152,22 @@ server {{
             pidfile = '{temp}/{appid}.pid'.format(temp=self.temp_path, appid=ap['appid'])
             ap['pid'] = 0
             if os.path.exists(pidfile):
-                with open(pidfile) as f:
-                    ap['pid'] = int(f.read())
+                try:
+                    with open(pidfile) as f:
+                        ap['pid'] = int(f.read())
+                except:
+                    pass
+                if ap['pid']:
+                    try:
+                        import psutil
+                        try:
+                            p = psutil.Process(pid=ap['pid'])
+                        except:
+                            ap['pid'] = 0
+                    except:
+                        pass
+            if not ap['pid']:
+                del ap['pid']
         return apps
 
 
