@@ -19,7 +19,7 @@ class BasehHandler(tornado.web.RequestHandler):
 
 class HelloHandler(BasehHandler):
     def get(self):
-        self.write("Hello, world")
+        self.write("HELLO, WORLD. IT'S A WSGI RUNNER!")
 
 
 class AppListHandler(BasehHandler):
@@ -70,14 +70,17 @@ tornado_app = tornado.web.Application([
 
 
 def echook():
-    print('started!')
+    from tornado.options import options
+    print('WSGI RUNNER @ %s:%s' % (options.address, options.port))
 
 
 def main():
     from tornado.options import options, define
     define('port', type=int, default=8080)
-    server = tornado.httpserver.HTTPServer(tornado_app)
-    server.listen(options.port, address='0.0.0.0')
+    define('address', type=str, default='0.0.0.0')
+    # server = tornado.httpserver.HTTPServer(tornado_app)
+    tornado_app.listen(options.port, options.address)
+    # server.listen(options.port, address='0.0.0.0')
     tornado.ioloop.IOLoop.instance().add_callback(echook)
     tornado.ioloop.IOLoop.instance().start()
 

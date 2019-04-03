@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-import os, json, zipfile, requests, yaml
+import os, sys, time, json, zipfile, requests, yaml
 
 root = os.path.dirname(os.path.realpath(__file__))
 zippath = root + '.zip'
-# zippath = '/tmp/t.zip'
 
 config = yaml.load(open(os.path.join(root, 'deploy.yaml')))
 upurl = config.get('upload')
@@ -12,8 +11,16 @@ if not config['appid']:
     raise Exception('need appid in deploy.yaml')
 
 
+def _print(*args, **kwargs):
+    sys.stdout.write(' '.join(args))
+    end = kwargs.get('end', '\n')
+    if end:
+        sys.stdout.write(end)
+    sys.stdout.flush()
+
+
 def make_zip():
-    print('makezip', root, '->', zippath)
+    _print('makezip', root, '->', zippath)
     if os.path.exists(zippath):
         os.remove(zippath)
     z = zipfile.ZipFile(zippath, 'w', zipfile.ZIP_DEFLATED)
@@ -31,8 +38,8 @@ def upload_zip():
     files = {
         'file': open(zippath, 'rb')
     }
-    print('upload', zippath, '->', upurl)
-    print(requests.post(upurl, data={'config': json.dumps(config)}, files=files).text)
+    _print('upload', zippath, '->', upurl)
+    _print(requests.post(upurl, data={'config': json.dumps(config)}, files=files).text)
 
 
 def upload_zip_with_progress():
@@ -45,29 +52,35 @@ def upload_zip_with_progress():
     total = os.path.getsize(zippath)
     hodel = {
         'proc': 0,
+        'last': 0,
     }
 
     def on_progress(monitor):
-        nproc = int(monitor.bytes_read * 100 / total) if total else 0
+        nproc = min(100, int(monitor.bytes_read * 100 / total) if total else 0)
+        nlast = time.time()
         oproc = hodel['proc']
-        if (nproc - oproc) > 5:
-            proc = '%s%%' % min(nproc, 100)
+        olast = hodel['last']
+        if (nproc - oproc) > 5 or (nlast - olast) > 1:
+            proc = '%s%%' % nproc
             hodel['proc'] = nproc
-            print('\rupload', proc)
+            hodel['last'] = nlast
+            barw = 50
+            prow = int(barw * nproc / 100)
+            _print('\ruploading... [%s%s] %s' % ('#' * prow, '-' * (barw - prow), proc), end='')
 
     e = MultipartEncoder(fields=data)
     m = MultipartEncoderMonitor(e, on_progress)
-    print('upload', zippath, '->', upurl)
-    print(requests.post(upurl, data=m, headers={'Content-Type': m.content_type}).text)
+    _print('upload', zippath, '->', upurl)
+    res = requests.post(upurl, data=m, headers={'Content-Type': m.content_type}).text
+    _print()
+    _print(res)
 
 
 if __name__ == '__main__':
-    import sys
-
     if len(sys.argv) == 2:
         upurl = sys.argv[1]
     if not upurl:
-        print('need upload server')
+        _print('need upload server')
         exit(0)
     make_zip()
     has_requests_toolbelt = False
@@ -81,3 +94,4 @@ if __name__ == '__main__':
         upload_zip_with_progress()
     else:
         upload_zip()
+    # os.remove(zippath)
