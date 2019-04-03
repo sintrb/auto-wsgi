@@ -59,7 +59,7 @@ class UploadApplicationHandler(BasehHandler):
         self.aw.add_application(appid, **config)
         self.aw.run_application(appid)
         print('add', appid)
-        self.write('deploy %s success!  %s' % (appid, config['host']))
+        self.write('deploy %s success!  http://%s' % (appid, config['host']))
 
 
 tornado_app = tornado.web.Application([
