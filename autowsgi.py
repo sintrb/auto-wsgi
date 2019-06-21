@@ -99,6 +99,14 @@ server {{
             break;
         }}
     }}
+    location /ws {{
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Host $http_host;
+        proxy_pass http://iwebm_{appid}_server;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }}
 }}            
             '''.format(**param)
             with open(os.path.join(nginx_path, '%s.conf' % appid), 'w') as f:
